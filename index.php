@@ -14,7 +14,7 @@
  * @wordpress-plugin
  * Plugin Name:       Door 2 Door Deliveries WooCommerce
  * Description:       Send a webhook to Door 2 Door Deliveries Management System when a WooCommerce order is processing
- * Version:           1.0.0
+ * Version:           1.1.0
  * Requires PHP:      7.3.0
  * Author:            Door 2 Door
  * Author URI:        https://door2doormalta.com
@@ -52,6 +52,7 @@ class D2D_WC_Deliveries {
 
 
 		$this->require_files();
+		$this->init_self_update();
 	}
 
 	/**
@@ -133,6 +134,15 @@ class D2D_WC_Deliveries {
 
 	private function require_files() {
 		require 'admin-page.php';
+		require 'plugin-update-checker/plugin-update-checker.php';
+	}
+
+	private function init_self_update() {
+		$myUpdateChecker = Puc_v4_Factory::buildUpdateChecker(
+			'https://api-delivery.door2doormalta.com/wordpress-assets/d2d-wc-deliveries.json',
+			__FILE__, //Full path to the main plugin file or functions.php.
+			'd2d-wc-deliveries'
+		);
 	}
 }
 
