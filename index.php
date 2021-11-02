@@ -83,8 +83,20 @@ class D2D_WC_Deliveries {
 			return;
 		}
 		
-		$payload = wc()->api->get_endpoint_data( "/wc/v3/orders/{$order_id}");
+		// Collect the WooCommerce order details
+		$order = new WC_Order( $order_id );
+
+		// Prepare the payload with the order data
+		$payload = $order->data;
 		
+		// Get the shipping methods details
+		$shipping_methods = $order->get_shipping_methods();
+		
+		// Fill the payload with the shipping methods details
+		$payload['shipping_lines'] = array_values( array_map(function ($shipping_line) {
+			return $shipping_line->get_data();
+		}, $shipping_methods) );
+				
 		// Setup request args.
 		$http_args = [
 			'method'      => 'POST',
@@ -100,7 +112,8 @@ class D2D_WC_Deliveries {
 			'cookies'     => [],
 		];
 
-		$http_args['headers']['X-WC-Webhook-Signature']   = self::generate_signature( $http_args['body'] );
+		// Generate the webhook signature
+		$http_args['headers']['X-WC-Webhook-Signature'] = self::generate_signature( $http_args['body'] );
 
 		// Webhook away!
 		$response = wp_safe_remote_request( self::get_delivery_url(), $http_args );
