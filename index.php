@@ -14,7 +14,7 @@
  * @wordpress-plugin
  * Plugin Name:       Door 2 Door Deliveries WooCommerce
  * Description:       Send a webhook to Door 2 Door Deliveries Management System when a WooCommerce order is processing
- * Version:           1.0.0
+ * Version:           1.1.0
  * Requires PHP:      7.3.0
  * Author:            Door 2 Door
  * Author URI:        https://door2doormalta.com
@@ -52,6 +52,7 @@ class D2D_WC_Deliveries {
 
 
 		$this->require_files();
+		$this->init_self_update();
 	}
 
 	/**
@@ -82,8 +83,20 @@ class D2D_WC_Deliveries {
 			return;
 		}
 		
-		$payload = wc()->api->get_endpoint_data( "/wc/v3/orders/{$order_id}");
+		// Collect the WooCommerce order details
+		$order = new WC_Order( $order_id );
+
+		// Prepare the payload with the order data
+		$payload = $order->data;
 		
+		// Get the shipping methods details
+		$shipping_methods = $order->get_shipping_methods();
+		
+		// Fill the payload with the shipping methods details
+		$payload['shipping_lines'] = array_values( array_map(function ($shipping_line) {
+			return $shipping_line->get_data();
+		}, $shipping_methods) );
+				
 		// Setup request args.
 		$http_args = [
 			'method'      => 'POST',
@@ -99,7 +112,8 @@ class D2D_WC_Deliveries {
 			'cookies'     => [],
 		];
 
-		$http_args['headers']['X-WC-Webhook-Signature']   = self::generate_signature( $http_args['body'] );
+		// Generate the webhook signature
+		$http_args['headers']['X-WC-Webhook-Signature'] = self::generate_signature( $http_args['body'] );
 
 		// Webhook away!
 		$response = wp_safe_remote_request( self::get_delivery_url(), $http_args );
@@ -133,6 +147,15 @@ class D2D_WC_Deliveries {
 
 	private function require_files() {
 		require 'admin-page.php';
+		require 'plugin-update-checker/plugin-update-checker.php';
+	}
+
+	private function init_self_update() {
+		$myUpdateChecker = Puc_v4_Factory::buildUpdateChecker(
+			'https://api-delivery.door2doormalta.com/wordpress-assets/d2d-wc-deliveries.json',
+			__FILE__, //Full path to the main plugin file or functions.php.
+			'd2d-wc-deliveries'
+		);
 	}
 }
 
