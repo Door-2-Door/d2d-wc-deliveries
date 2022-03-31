@@ -10,12 +10,13 @@
  *
  * @link              https://github.com/Door-2-Door/d2d-wc-deliveries
  * @package           D2D_WC_Deliveries
+ * @author			  Samuel Hassid
  *
  * @wordpress-plugin
  * Plugin Name:       Door 2 Door Deliveries WooCommerce
  * Description:       Send a webhook to Door 2 Door Deliveries Management System when a WooCommerce order is processing
- * Version:           1.1.0
- * Requires PHP:      7.3.0
+ * Version:           2.0.0
+ * Requires PHP:      7.4.0
  * Author:            Door 2 Door
  * Author URI:        https://door2doormalta.com
  * Text Domain:       d2d-wc-deliveries
@@ -43,16 +44,15 @@ class D2D_WC_Deliveries {
 
 	protected function __construct() {
 
+		$this->require_files();
+		$this->init_self_update();
+
 		// Register the plugin configuration page
 		add_action('admin_menu', [$this, 'register_configuration_page']);
-
 
 		// Listen for order processing event
         add_action( 'woocommerce_order_status_processing', [$this, 'd2d_order_processing_callback'], 10, 1 );
 
-
-		$this->require_files();
-		$this->init_self_update();
 	}
 
 	/**
@@ -117,6 +117,36 @@ class D2D_WC_Deliveries {
 
 		// Webhook away!
 		$response = wp_safe_remote_request( self::get_delivery_url(), $http_args );
+
+		/**
+		 * In case of success we store the result on the order
+		 * That will allow to display the tracking link on the WC Order details page
+		 */
+		if ( !is_array($response) || $response['response']['code'] != 200 ) {
+			return;
+		}
+
+		$body = $response['body'];
+
+		if ( is_string($body) && $body == 'No shipping needed') {
+			
+			/**
+			 * No shipping needed for this order
+			 * Let's persist that info on the WC Order
+			 */
+			update_post_meta( $order_id, 'd2d_order_needs_shipping', false );
+		
+		} elseif ( is_array($body) && array_key_exists('pickups', $body) && array_key_exists('result_tracking_link', $body['pickups'])) {
+
+			/**
+			 * Shipping needed and tracking link available
+			 * Let's persist that info on the WC Order
+			 */
+			update_post_meta( $order_id, 'd2d_order_needs_shipping', true );
+			update_post_meta( $order_id, 'd2d_tracking_link', wc_clean( $body['pickups']['result_tracking_link'] ) );
+
+		}
+
 	}
 
 	/**
@@ -147,11 +177,12 @@ class D2D_WC_Deliveries {
 
 	private function require_files() {
 		require 'admin-page.php';
+		require 'woocommerce-admin-order/courier-tracking.php';
 		require 'plugin-update-checker/plugin-update-checker.php';
 	}
 
 	private function init_self_update() {
-		$myUpdateChecker = Puc_v4_Factory::buildUpdateChecker(
+		Puc_v4_Factory::buildUpdateChecker(
 			'https://api-delivery.door2doormalta.com/wordpress-assets/d2d-wc-deliveries.json',
 			__FILE__, //Full path to the main plugin file or functions.php.
 			'd2d-wc-deliveries'
