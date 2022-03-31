@@ -15,7 +15,7 @@
  * @wordpress-plugin
  * Plugin Name:       Door 2 Door Deliveries WooCommerce
  * Description:       Send a webhook to Door 2 Door Deliveries Management System when a WooCommerce order is processing
- * Version:           2.0.0
+ * Version:           2.1.0
  * Requires PHP:      7.4.0
  * Author:            Door 2 Door
  * Author URI:        https://door2doormalta.com
@@ -135,15 +135,18 @@ class D2D_WC_Deliveries {
 			 * Let's persist that info on the WC Order
 			 */
 			update_post_meta( $order_id, 'd2d_order_needs_shipping', false );
+			return;
 		
-		} elseif ( is_array($body) && array_key_exists('pickups', $body) && array_key_exists('result_tracking_link', $body['pickups'])) {
+		}
+
+		if ( $tracking_link = static::extract_tracking_link_from_response( $body ) ) {
 
 			/**
 			 * Shipping needed and tracking link available
 			 * Let's persist that info on the WC Order
 			 */
 			update_post_meta( $order_id, 'd2d_order_needs_shipping', true );
-			update_post_meta( $order_id, 'd2d_tracking_link', wc_clean( $body['pickups']['result_tracking_link'] ) );
+			update_post_meta( $order_id, 'd2d_tracking_link', wc_clean( $tracking_link ) );
 
 		}
 
@@ -187,6 +190,34 @@ class D2D_WC_Deliveries {
 			__FILE__, //Full path to the main plugin file or functions.php.
 			'd2d-wc-deliveries'
 		);
+	}
+
+	/**
+	 * Extract the tracking link from the Door 2 Door API response
+	 * 
+	 * @param string $response The response as a JSON string
+	 * @return string|false Returns the tracking link if present - Otherwise return false
+	 */
+	private static function extract_tracking_link_from_response($response) {
+
+		if ( !is_string($response) ) {
+			return false;
+		}
+
+		$response_object = json_decode( $response );
+
+		if (
+			!property_exists($response_object, 'data')
+		 || !property_exists($response_object->data, 'pickups')
+		 || !is_array($response_object->data->pickups)
+		 || !$response_object->data->pickups
+		 || !property_exists($response_object->data->pickups[0], 'result_tracking_link')
+		) {
+			return false;
+		}
+
+		return $response_object->data->pickups[0]->result_tracking_link;
+
 	}
 }
 
