@@ -44,16 +44,15 @@ class D2D_WC_Deliveries {
 
 	protected function __construct() {
 
+		$this->require_files();
+		$this->init_self_update();
+
 		// Register the plugin configuration page
 		add_action('admin_menu', [$this, 'register_configuration_page']);
-
 
 		// Listen for order processing event
         add_action( 'woocommerce_order_status_processing', [$this, 'd2d_order_processing_callback'], 10, 1 );
 
-
-		$this->require_files();
-		$this->init_self_update();
 	}
 
 	/**
@@ -152,7 +151,7 @@ class D2D_WC_Deliveries {
 	}
 
 	private function init_self_update() {
-		$myUpdateChecker = Puc_v4_Factory::buildUpdateChecker(
+		Puc_v4_Factory::buildUpdateChecker(
 			'https://api-delivery.door2doormalta.com/wordpress-assets/d2d-wc-deliveries.json',
 			__FILE__, //Full path to the main plugin file or functions.php.
 			'd2d-wc-deliveries'
