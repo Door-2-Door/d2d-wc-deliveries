@@ -10,12 +10,13 @@
  *
  * @link              https://github.com/Door-2-Door/d2d-wc-deliveries
  * @package           D2D_WC_Deliveries
+ * @author			  Samuel Hassid
  *
  * @wordpress-plugin
  * Plugin Name:       Door 2 Door Deliveries WooCommerce
  * Description:       Send a webhook to Door 2 Door Deliveries Management System when a WooCommerce order is processing
- * Version:           1.1.0
- * Requires PHP:      7.3.0
+ * Version:           2.0.0
+ * Requires PHP:      7.4.0
  * Author:            Door 2 Door
  * Author URI:        https://door2doormalta.com
  * Text Domain:       d2d-wc-deliveries
