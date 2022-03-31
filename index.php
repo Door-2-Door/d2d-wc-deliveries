@@ -177,6 +177,7 @@ class D2D_WC_Deliveries {
 
 	private function require_files() {
 		require 'admin-page.php';
+		require 'woocommerce-admin-order/courier-tracking.php';
 		require 'plugin-update-checker/plugin-update-checker.php';
 	}
 
