@@ -117,6 +117,36 @@ class D2D_WC_Deliveries {
 
 		// Webhook away!
 		$response = wp_safe_remote_request( self::get_delivery_url(), $http_args );
+
+		/**
+		 * In case of success we store the result on the order
+		 * That will allow to display the tracking link on the WC Order details page
+		 */
+		if ( !is_array($response) || $response['response']['code'] != 200 ) {
+			return;
+		}
+
+		$body = $response['body'];
+
+		if ( is_string($body) && $body == 'No shipping needed') {
+			
+			/**
+			 * No shipping needed for this order
+			 * Let's persist that info on the WC Order
+			 */
+			update_post_meta( $order_id, 'd2d_order_needs_shipping', false );
+		
+		} elseif ( is_array($body) && array_key_exists('pickups', $body) && array_key_exists('result_tracking_link', $body['pickups'])) {
+
+			/**
+			 * Shipping needed and tracking link available
+			 * Let's persist that info on the WC Order
+			 */
+			update_post_meta( $order_id, 'd2d_order_needs_shipping', true );
+			update_post_meta( $order_id, 'd2d_tracking_link', wc_clean( $body['pickups']['result_tracking_link'] ) );
+
+		}
+
 	}
 
 	/**
